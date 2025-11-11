@@ -890,15 +890,18 @@ const PostEditor = () => {
 // --- Analytics Tracker ---
 const AnalyticsTracker = () => {
   const location = useLocation();
-  const GA_MEASUREMENT_ID = "G-422P4QG1NB"; 
 
   useEffect(() => {
     // This effect runs on component mount and whenever the location changes.
     if (typeof window.gtag === 'function') {
-      // The 'config' command sends a pageview for the initial load and for subsequent route changes.
-      window.gtag('config', GA_MEASUREMENT_ID, {
-        page_path: location.pathname + location.hash, // Use hash for HashRouter compatibility
+      // For a single-page app (SPA) using HashRouter, the path changes without a full page reload.
+      // We need to manually send a 'page_view' event to Google Analytics for each route change.
+      // `location.pathname` from the `useLocation` hook gives the virtual path (e.g., '/post/some-slug').
+      // This ensures each page view is tracked with its correct, individual path.
+      window.gtag('event', 'page_view', {
+        page_path: location.pathname,
         page_title: document.title,
+        page_location: window.location.href
       });
     }
   }, [location]);
