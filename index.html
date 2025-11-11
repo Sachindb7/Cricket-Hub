@@ -60,7 +60,7 @@
     <script type="text/babel" data-type="module">
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter, Routes, Route, Outlet, Link, NavLink, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Link, NavLink, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
@@ -271,7 +271,7 @@ const PostDetail = () => {
 
   useEffect(() => {
     if (post) {
-      const postUrl = `${window.location.origin}/#/post/${post.id}`;
+      const postUrl = `${window.location.origin}/post/${post.id}`;
       document.title = `${post.title} | Cricket Hub`;
       setMetaTag('name', 'description', post.excerpt);
       setMetaTag('property', 'og:title', post.title);
@@ -687,7 +687,7 @@ const AnalyticsTracker = () => {
     if (typeof window.gtag === 'function') {
       // The 'config' command sends a pageview for the initial load and for subsequent route changes.
       window.gtag('config', GA_MEASUREMENT_ID, {
-        page_path: location.pathname + location.hash, // Use hash for HashRouter compatibility
+        page_path: location.pathname + location.search, // Use pathname + search for BrowserRouter
         page_title: document.title,
       });
     }
@@ -699,7 +699,7 @@ const AnalyticsTracker = () => {
 
 // --- App ---
 const App = () => (
-  <HashRouter>
+  <BrowserRouter>
     <AnalyticsTracker />
     <Header/>
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
@@ -709,7 +709,7 @@ const App = () => (
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
-        <Route path="/admin" element={<AdminLayout/>}>
+        <Route path="/admin/*" element={<AdminLayout/>}>
           <Route index element={<AdminDashboard/>}/>
           <Route path="new" element={<PostEditor/>}/>
           <Route path="edit/:id" element={<PostEditor/>}/>
@@ -718,7 +718,7 @@ const App = () => (
       </Routes>
     </div>
     <Footer/>
-  </HashRouter>
+  </BrowserRouter>
 );
 
 
