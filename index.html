@@ -63,7 +63,7 @@ import ReactDOM from 'react-dom/client';
 import { HashRouter, Routes, Route, Outlet, Link, NavLink, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where, limit } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
 // --- Firebase Config & Initialization ---
@@ -81,6 +81,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const postsCollectionRef = collection(db, 'posts');
+
+// --- Helper Functions ---
+const slugify = (text) => {
+  if (!text) return '';
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start of text
+    .replace(/-+$/, '');            // Trim - from end of text
+};
 
 // --- SEO Helper Functions ---
 const setMetaTag = (attr, attrValue, content) => {
@@ -137,6 +148,19 @@ const getPostById = async (id) => {
     const postDoc = doc(db, 'posts', id);
     const docSnap = await getDoc(postDoc);
     return docSnap.exists() ? { ...docSnap.data(), id: docSnap.id } : undefined;
+};
+
+const getPostBySlug = async (slug) => {
+    const q = query(postsCollectionRef, where("slug", "==", slug), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0];
+        return { ...docSnap.data(), id: docSnap.id };
+    } else {
+        // Fallback for old posts: if no post is found by slug, the "slug" might be an ID.
+        return getPostById(slug);
+    }
 };
 
 const addPost = async (postData) => {
@@ -204,7 +228,7 @@ const Footer = () => (
 
 const PostCard = ({post})=>(
   <div className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300">
-    <Link to={`/post/${post.id}`} className="block">
+    <Link to={`/post/${post.slug || post.id}`} className="block">
       <img className="w-full h-48 object-cover" src={post.imageUrl} alt={post.title} />
       <div className="p-6">
         <h2 className="text-2xl font-bold mb-2 text-neutral hover:text-primary">{post.title}</h2>
@@ -259,22 +283,22 @@ const PostList = () => {
 };
 
 const PostDetail = () => {
-  const {id}=useParams(); const [post,setPost]=useState(null); const [loading,setLoading]=useState(true);
+  const {slug}=useParams(); const [post,setPost]=useState(null); const [loading,setLoading]=useState(true);
   
   useEffect(()=>{
-    if(id){
-      const fetchPost=async()=>{ setLoading(true); const data=await getPostById(id); setPost(data || null); setLoading(false); };
+    if(slug){
+      const fetchPost=async()=>{ setLoading(true); const data=await getPostBySlug(slug); setPost(data || null); setLoading(false); };
       fetchPost();
     }
     return () => {
       removeStructuredData();
       removeMetaTagByAttr('name', 'keywords');
     };
-  },[id]);
+  },[slug]);
 
   useEffect(() => {
     if (post) {
-      const postUrl = `${window.location.origin}/#/post/${post.id}`;
+      const postUrl = `${window.location.origin}/#/post/${post.slug || post.id}`;
       const description = post.metaDescription || post.excerpt;
       
       document.title = `${post.title} | Cricket Hub`;
@@ -557,6 +581,7 @@ const AdminDashboard = () => {
 const PostEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [post, setPost] = useState(null);
   const [title, setTitle] = useState('');
   const [metaDescription, setMetaDescription] = useState('');
   const [metaKeywords, setMetaKeywords] = useState('');
@@ -587,12 +612,13 @@ const PostEditor = () => {
     if (quill) {
       if (isEditing) {
         setLoading(true);
-        getPostById(id).then(post => {
-          if (post) {
-            setTitle(post.title || '');
-            setMetaDescription(post.metaDescription || '');
-            setMetaKeywords(post.metaKeywords || '');
-            quill.root.innerHTML = post.content || '';
+        getPostById(id).then(fetchedPost => {
+          if (fetchedPost) {
+            setPost(fetchedPost);
+            setTitle(fetchedPost.title || '');
+            setMetaDescription(fetchedPost.metaDescription || '');
+            setMetaKeywords(fetchedPost.metaKeywords || '');
+            quill.root.innerHTML = fetchedPost.content || '';
           }
         }).catch(err => {
           console.error(err);
@@ -600,6 +626,7 @@ const PostEditor = () => {
           setLoading(false);
         });
       } else {
+        setPost(null);
         setTitle('');
         setMetaDescription('');
         setMetaKeywords('');
@@ -630,6 +657,11 @@ const PostEditor = () => {
     const excerpt = textContent.substring(0, 150) + (textContent.length > 150 ? '...' : '');
     const imageUrl = firstImageUrl || `https://picsum.photos/seed/${title.trim().replace(/\s+/g, '-') || 'post'}/800/400`;
 
+    let slug = post?.slug;
+    if (!slug) {
+        slug = slugify(title.trim()) + '-' + Math.random().toString(36).substring(2, 8);
+    }
+
     const postData = {
       title: title.trim(),
       content: finalContent,
@@ -638,6 +670,7 @@ const PostEditor = () => {
       imageUrl,
       metaDescription: metaDescription.trim(),
       metaKeywords: metaKeywords.trim(),
+      slug: slug,
     };
 
     try {
@@ -744,7 +777,7 @@ const App = () => (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
       <Routes>
         <Route path="/" element={<PostList/>}/>
-        <Route path="/post/:id" element={<PostDetail/>}/>
+        <Route path="/post/:slug" element={<PostDetail/>}/>
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
