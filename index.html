@@ -272,13 +272,10 @@ const PostDetail = () => {
   useEffect(() => {
     if (post) {
       const postUrl = `${window.location.origin}/post/${post.id}`;
-      const metaTitle = post.metaTitle || post.title;
-      const metaDescription = post.metaDescription || post.excerpt;
-
-      document.title = `${metaTitle} | Cricket Hub`;
-      setMetaTag('name', 'description', metaDescription);
-      setMetaTag('property', 'og:title', metaTitle);
-      setMetaTag('property', 'og:description', metaDescription);
+      document.title = `${post.title} | Cricket Hub`;
+      setMetaTag('name', 'description', post.excerpt);
+      setMetaTag('property', 'og:title', post.title);
+      setMetaTag('property', 'og:description', post.excerpt);
       setMetaTag('property', 'og:type', 'article');
       setMetaTag('property', 'og:url', postUrl);
       setMetaTag('property', 'og:image', post.imageUrl);
@@ -321,16 +318,7 @@ const PostDetail = () => {
     <article className="max-w-4xl mx-auto bg-white p-6 sm:p-8 lg:p-12 rounded-lg shadow-xl">
       <img className="w-full h-64 md:h-96 object-cover rounded-md mb-8" src={post.imageUrl} alt={post.title} />
       <h1 className="text-4xl md:text-5xl font-extrabold text-neutral mb-4 leading-tight">{post.title}</h1>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-gray-500 mb-4">
-        <p>By <span className="font-semibold">{post.author}</span> on {new Date(post.date).toLocaleDateString()}</p>
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap items-center mt-2 sm:mt-0">
-            {post.tags.map(tag => (
-              <span key={tag} className="bg-accent text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">{tag}</span>
-            ))}
-          </div>
-        )}
-      </div>
+      <p className="text-gray-500 mb-8">By <span className="font-semibold">{post.author}</span> on {new Date(post.date).toLocaleDateString()}</p>
       
       <AdPlaceholder label="Article Top Banner" />
 
@@ -560,16 +548,11 @@ const AdminDashboard = () => {
 const PostEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const isEditing = Boolean(id);
   const quillRef = useRef(null);
   const quillInstanceRef = useRef(null);
-
-  // Form state
-  const [title, setTitle] = useState('');
-  const [metaTitle, setMetaTitle] = useState('');
-  const [metaDescription, setMetaDescription] = useState('');
-  const [tags, setTags] = useState('');
 
   useEffect(() => {
     if (quillRef.current && !quillInstanceRef.current) {
@@ -596,9 +579,6 @@ const PostEditor = () => {
         getPostById(id).then(post => {
           if (post) {
             setTitle(post.title || '');
-            setMetaTitle(post.metaTitle || '');
-            setMetaDescription(post.metaDescription || '');
-            setTags(Array.isArray(post.tags) ? post.tags.join(', ') : '');
             quill.root.innerHTML = post.content || '';
           }
         }).catch(err => {
@@ -607,11 +587,7 @@ const PostEditor = () => {
           setLoading(false);
         });
       } else {
-        // Reset fields for new post
         setTitle('');
-        setMetaTitle('');
-        setMetaDescription('');
-        setTags('');
         quill.root.innerHTML = '';
       }
     }
@@ -638,8 +614,6 @@ const PostEditor = () => {
     const textContent = tempDiv.textContent || "";
     const excerpt = textContent.substring(0, 150) + (textContent.length > 150 ? '...' : '');
     const imageUrl = firstImageUrl || `https://picsum.photos/seed/${title.trim().replace(/\s+/g, '-') || 'post'}/800/400`;
-    
-    const postTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
     const postData = {
       title,
@@ -647,9 +621,6 @@ const PostEditor = () => {
       author: 'Admin',
       excerpt,
       imageUrl,
-      metaTitle: metaTitle.trim() || title.trim(), // Fallback to main title
-      metaDescription: metaDescription.trim() || excerpt, // Fallback to excerpt
-      tags: postTags,
     };
 
     try {
@@ -672,78 +643,30 @@ const PostEditor = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md relative">
+    <div className="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md relative">
       {loading && isEditing && (
         <div className="absolute inset-0 bg-white bg-opacity-80 flex justify-center items-center z-10 rounded-lg">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       )}
       <h2 className="text-3xl font-bold mb-6">{isEditing ? 'Edit Post' : 'Create New Post'}</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="lg:flex lg:space-x-8">
-          {/* Left Column: Main Editor */}
-          <div className="lg:w-2/3 space-y-6">
-            <div>
-              <label htmlFor="title-input" className="block text-sm font-medium text-gray-700">Title</label>
-              <input
-                id="title-input"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-              <div ref={quillRef} style={{ height: '400px', backgroundColor: 'white' }} className="mt-1" />
-            </div>
-          </div>
-
-          {/* Right Column: SEO Settings */}
-          <div className="lg:w-1/3 mt-6 lg:mt-0">
-            <div className="bg-gray-50 p-4 rounded-lg shadow-inner space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">SEO Settings</h3>
-              <div>
-                <label htmlFor="meta-title" className="block text-sm font-medium text-gray-700">Meta Title</label>
-                <input
-                  id="meta-title"
-                  type="text"
-                  value={metaTitle}
-                  onChange={(e) => setMetaTitle(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                  placeholder="Defaults to post title"
-                />
-                 <p className="text-xs text-gray-500 mt-1">Recommended: 50-60 characters.</p>
-              </div>
-              <div>
-                <label htmlFor="meta-description" className="block text-sm font-medium text-gray-700">Meta Description</label>
-                <textarea
-                  id="meta-description"
-                  rows="4"
-                  value={metaDescription}
-                  onChange={(e) => setMetaDescription(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                  placeholder="Defaults to post excerpt"
-                ></textarea>
-                <p className="text-xs text-gray-500 mt-1">Recommended: 150-160 characters.</p>
-              </div>
-              <div>
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700">Tags</label>
-                <input
-                  id="tags"
-                  type="text"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                  placeholder="e.g., news, analysis, players"
-                />
-                 <p className="text-xs text-gray-500 mt-1">Comma-separated values.</p>
-              </div>
-            </div>
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="title-input" className="block text-sm font-medium text-gray-700">Title</label>
+          <input
+            id="title-input"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+          />
         </div>
-        <div className="flex justify-end mt-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+          <div ref={quillRef} style={{ height: '400px', backgroundColor: 'white' }} className="mt-1" />
+        </div>
+        <div className="flex justify-end">
           <button type="submit" disabled={loading} className="bg-primary text-white px-6 py-2 rounded-md hover:bg-secondary disabled:bg-gray-400 transition-colors">
             {loading ? 'Saving...' : (isEditing ? 'Update Post' : 'Publish Post')}
           </button>
