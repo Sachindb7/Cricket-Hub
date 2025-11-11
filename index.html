@@ -266,22 +266,31 @@ const PostDetail = () => {
       const fetchPost=async()=>{ setLoading(true); const data=await getPostById(id); setPost(data || null); setLoading(false); };
       fetchPost();
     }
-    return () => { removeStructuredData(); }; // Cleanup on unmount
+    return () => {
+      removeStructuredData();
+      removeMetaTagByAttr('name', 'keywords');
+    };
   },[id]);
 
   useEffect(() => {
     if (post) {
       const postUrl = `${window.location.origin}/#/post/${post.id}`;
+      const description = post.metaDescription || post.excerpt;
+      
       document.title = `${post.title} | Cricket Hub`;
-      setMetaTag('name', 'description', post.excerpt);
+      setMetaTag('name', 'description', description);
       setMetaTag('property', 'og:title', post.title);
-      setMetaTag('property', 'og:description', post.excerpt);
+      setMetaTag('property', 'og:description', description);
       setMetaTag('property', 'og:type', 'article');
       setMetaTag('property', 'og:url', postUrl);
       setMetaTag('property', 'og:image', post.imageUrl);
       setMetaTag('name', 'twitter:card', 'summary_large_image');
       setLinkTag('canonical', postUrl);
       removeMetaTagByAttr('name', 'robots');
+
+      if (post.metaKeywords) {
+        setMetaTag('name', 'keywords', post.metaKeywords);
+      }
 
       setStructuredData({
         "@context": "https://schema.org",
@@ -301,7 +310,7 @@ const PostDetail = () => {
             "url": "https://picsum.photos/seed/crickethub-logo/600/60"
           }
         },
-        "description": post.excerpt
+        "description": description
       });
     }
   }, [post]);
@@ -549,6 +558,8 @@ const PostEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
+  const [metaKeywords, setMetaKeywords] = useState('');
   const [loading, setLoading] = useState(false);
   const isEditing = Boolean(id);
   const quillRef = useRef(null);
@@ -579,6 +590,8 @@ const PostEditor = () => {
         getPostById(id).then(post => {
           if (post) {
             setTitle(post.title || '');
+            setMetaDescription(post.metaDescription || '');
+            setMetaKeywords(post.metaKeywords || '');
             quill.root.innerHTML = post.content || '';
           }
         }).catch(err => {
@@ -588,6 +601,8 @@ const PostEditor = () => {
         });
       } else {
         setTitle('');
+        setMetaDescription('');
+        setMetaKeywords('');
         quill.root.innerHTML = '';
       }
     }
@@ -616,11 +631,13 @@ const PostEditor = () => {
     const imageUrl = firstImageUrl || `https://picsum.photos/seed/${title.trim().replace(/\s+/g, '-') || 'post'}/800/400`;
 
     const postData = {
-      title,
+      title: title.trim(),
       content: finalContent,
       author: 'Admin',
       excerpt,
       imageUrl,
+      metaDescription: metaDescription.trim(),
+      metaKeywords: metaKeywords.trim(),
     };
 
     try {
@@ -661,6 +678,28 @@ const PostEditor = () => {
             required
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
           />
+        </div>
+        <div>
+          <label htmlFor="meta-description-input" className="block text-sm font-medium text-gray-700">Meta Description (for SEO)</label>
+          <textarea
+            id="meta-description-input"
+            value={metaDescription}
+            onChange={(e) => setMetaDescription(e.target.value)}
+            rows="3"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+            placeholder="A concise summary of the article for search engines (around 160 characters)."
+          />
+        </div>
+        <div>
+            <label htmlFor="meta-keywords-input" className="block text-sm font-medium text-gray-700">Meta Keywords (for SEO, comma-separated)</label>
+            <input
+                id="meta-keywords-input"
+                type="text"
+                value={metaKeywords}
+                onChange={(e) => setMetaKeywords(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                placeholder="e.g., cricket, Virat Kohli, IPL 2024"
+            />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
