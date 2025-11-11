@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Loading Cricket Hub...</title>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-422P4QG1NB"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-422P4QG1NB');
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <style>
@@ -51,7 +60,7 @@
     <script type="text/babel" data-type="module">
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter, Routes, Route, Outlet, Link, NavLink, useParams, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Outlet, Link, NavLink, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
@@ -668,9 +677,30 @@ const PostEditor = () => {
 };
 
 
+// --- Analytics Tracker ---
+const AnalyticsTracker = () => {
+  const location = useLocation();
+  const GA_MEASUREMENT_ID = "G-422P4QG1NB"; 
+
+  useEffect(() => {
+    // This effect runs on component mount and whenever the location changes.
+    if (typeof window.gtag === 'function') {
+      // The 'config' command sends a pageview for the initial load and for subsequent route changes.
+      window.gtag('config', GA_MEASUREMENT_ID, {
+        page_path: location.pathname + location.hash, // Use hash for HashRouter compatibility
+        page_title: document.title,
+      });
+    }
+  }, [location]);
+
+  return null; // This component does not render anything
+};
+
+
 // --- App ---
 const App = () => (
   <HashRouter>
+    <AnalyticsTracker />
     <Header/>
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
       <Routes>
