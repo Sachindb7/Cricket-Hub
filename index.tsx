@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter, Routes, Route, Outlet, Link, NavLink, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Link, NavLink, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where, limit } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
@@ -35,7 +34,7 @@ const auth = getAuth(app);
 const postsCollectionRef = collection(db, 'posts');
 
 // --- Helper Functions ---
-const slugify = (text) => {
+const slugify = (text: string): string => {
   if (!text) return '';
   return text.toString().toLowerCase()
     .replace(/\s+/g, '-')           // Replace spaces with -
@@ -46,9 +45,9 @@ const slugify = (text) => {
 };
 
 // --- SEO Helper Functions ---
-const setMetaTag = (attr, attrValue, content) => {
+const setMetaTag = (attr: string, attrValue: string, content: string) => {
     const head = document.head;
-    let element = head.querySelector(`meta[${attr}="${attrValue}"]`);
+    let element = head.querySelector(`meta[${attr}="${attrValue}"]`) as HTMLMetaElement;
     if (!element) {
         element = document.createElement('meta');
         element.setAttribute(attr, attrValue);
@@ -57,9 +56,9 @@ const setMetaTag = (attr, attrValue, content) => {
     element.setAttribute('content', content);
 };
 
-const setLinkTag = (rel, href) => {
+const setLinkTag = (rel: string, href: string) => {
     const head = document.head;
-    let element = head.querySelector(`link[rel="${rel}"]`);
+    let element = head.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement;
     if (!element) {
         element = document.createElement('link');
         element.setAttribute('rel', rel);
@@ -68,7 +67,7 @@ const setLinkTag = (rel, href) => {
     element.setAttribute('href', href);
 };
 
-const setStructuredData = (data) => {
+const setStructuredData = (data: object) => {
     const head = document.head;
     let element = head.querySelector('script[type="application/ld+json"]');
     if (!element) {
@@ -79,7 +78,7 @@ const setStructuredData = (data) => {
     element.textContent = JSON.stringify(data);
 };
 
-const removeMetaTagByAttr = (attr, attrValue) => {
+const removeMetaTagByAttr = (attr: string, attrValue: string) => {
     const element = document.head.querySelector(`meta[${attr}="${attrValue}"]`);
     if (element) element.remove();
 };
@@ -90,19 +89,19 @@ const removeStructuredData = () => {
 };
 
 // --- Blog Service (Firebase Implementation) ---
-const getPosts = async () => {
+const getPosts = async (): Promise<any[]> => {
     const q = query(postsCollectionRef, orderBy('date', 'desc'));
     const data = await getDocs(q);
     return data.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 };
 
-const getPostById = async (id) => {
+const getPostById = async (id: string): Promise<any | undefined> => {
     const postDoc = doc(db, 'posts', id);
     const docSnap = await getDoc(postDoc);
     return docSnap.exists() ? { ...docSnap.data(), id: docSnap.id } : undefined;
 };
 
-const getPostBySlug = async (slug) => {
+const getPostBySlug = async (slug: string): Promise<any | undefined> => {
     const q = query(postsCollectionRef, where("slug", "==", slug), limit(1));
     const querySnapshot = await getDocs(q);
 
@@ -115,19 +114,19 @@ const getPostBySlug = async (slug) => {
     }
 };
 
-const addPost = async (postData) => {
+const addPost = async (postData: any): Promise<any> => {
     const newPost = { ...postData, date: new Date().toISOString() };
     const docRef = await addDoc(postsCollectionRef, newPost);
     return { ...newPost, id: docRef.id };
 };
 
-const updatePost = async (id, postData) => {
+const updatePost = async (id: string, postData: any): Promise<any> => {
     const postDoc = doc(db, 'posts', id);
     await updateDoc(postDoc, postData);
     return { ...postData, id };
 };
 
-const deletePost = async (id) => {
+const deletePost = async (id: string): Promise<boolean> => {
     const postDoc = doc(db, 'posts', id);
     await deleteDoc(postDoc);
     return true;
@@ -135,7 +134,7 @@ const deletePost = async (id) => {
 
 
 // --- Components ---
-const AdPlaceholder = ({ label, width = '100%', height = '90px' }) => {
+const AdPlaceholder = ({ label, width = '100%', height = '90px' }: {label: string, width?: string, height?: string}) => {
   // This component is hidden by default via CSS in the <head>.
   // To make it visible for development, find the ".ad-placeholder" rule 
   // and change "display: none" to "display: flex".
@@ -178,7 +177,7 @@ const Footer = () => (
     </footer>
 );
 
-const PostCard = ({post})=>(
+const PostCard = ({post}: {post: any})=>(
   <div className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300">
     <Link to={`/post/${post.slug || post.id}`} className="block">
       <img className="w-full h-48 object-cover" src={post.imageUrl} alt={post.title} />
@@ -192,7 +191,7 @@ const PostCard = ({post})=>(
 );
 
 const PostList = () => {
-  const [posts,setPosts]=useState([]); const [loading,setLoading]=useState(true);
+  const [posts,setPosts]=useState<any[]>([]); const [loading,setLoading]=useState(true);
   useEffect(()=>{
     document.title = 'Cricket Hub - Latest Articles and News';
     setMetaTag('name', 'description', 'Your one-stop destination for the latest cricket news, articles, match analysis, and player insights. Stay updated with Cricket Hub.');
@@ -212,7 +211,6 @@ const PostList = () => {
 
   if(loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>;
 
-  // Fix for: Type '{ key: any; post: any; }' is not assignable to type '{ post: any; }'.
   const postsWithAds = posts.reduce<React.ReactNode[]>((acc, post, index) => {
     acc.push(<PostCard key={post.id} post={post}/>);
     // Insert an in-feed ad after the 3rd post, 6th, etc.
@@ -236,7 +234,7 @@ const PostList = () => {
 };
 
 const PostDetail = () => {
-  const {slug}=useParams(); const [post,setPost]=useState(null); const [loading,setLoading]=useState(true);
+  const {slug}=useParams<{slug: string}>(); const [post,setPost]=useState<any>(null); const [loading,setLoading]=useState(true);
   
   useEffect(()=>{
     if(slug){
@@ -251,7 +249,7 @@ const PostDetail = () => {
 
   useEffect(() => {
     if (post) {
-      const postUrl = `${window.location.origin}/#/post/${post.slug || post.id}`;
+      const postUrl = `${window.location.origin}/post/${post.slug || post.id}`;
       const description = post.metaDescription || post.excerpt;
       
       document.title = `${post.title} | Cricket Hub`;
@@ -318,7 +316,6 @@ const PostDetail = () => {
 };
 
 // --- Static Pages ---
-// Fix for: Property 'children' is missing in type '{ title: string; }' but required in type '{ title: any; children: any; }'.
 const StaticPage = ({ title, children }: { title: string, children: React.ReactNode }) => {
     useEffect(() => {
         document.title = `${title} | Cricket Hub`;
@@ -383,8 +380,8 @@ const AdminLogin = () => {
 
   useEffect(()=>{
     if(showLogin) return;
-    let timeoutId;
-    const handleKeyDown=(e)=>{
+    let timeoutId: number;
+    const handleKeyDown=(e: KeyboardEvent)=>{
       if(e.key.length>1){ setSeq(''); return; }
       const newSeq = (seq+e.key.toLowerCase()).slice(-10);
       setSeq(newSeq);
@@ -392,542 +389,4 @@ const AdminLogin = () => {
       clearTimeout(timeoutId);
       timeoutId=window.setTimeout(()=>setSeq(''),2000);
     };
-    window.addEventListener('keydown',handleKeyDown);
-    return ()=>{ window.removeEventListener('keydown',handleKeyDown); clearTimeout(timeoutId); };
-  },[seq,showLogin]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged in AdminLayout will handle the redirect
-    } catch (err) {
-      console.error(err);
-      let friendlyError = "Failed to sign in. Please check your email and password.";
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-          friendlyError = "Invalid email or password.";
-      } else if (err.code === 'auth/invalid-email') {
-          friendlyError = "Please enter a valid email address.";
-      }
-      setError(friendlyError);
-    } finally {
-        setLoading(false);
-    }
-  };
-
-  return showLogin?(
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-6">Admin Login</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" autoFocus />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-          </div>
-          {error && <p className="text-error text-sm mb-4">{error}</p>}
-          <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary disabled:bg-gray-400">
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-      </div>
-    </div>
-  ):(
-    <div className="text-center text-gray-500">
-      <h1 className="text-4xl font-bold mb-4">404</h1>
-      <p className="text-xl">Page Not Found</p>
-    </div>
-  );
-};
-
-// --- Admin Layout & Dashboard ---
-const AdminLayout = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    document.title = 'Admin Panel | Cricket Hub';
-    setMetaTag('name', 'robots', 'noindex, nofollow');
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogout = () => {
-    signOut(auth).catch(error => console.error("Logout failed", error));
-  };
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AdminLogin />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow flex justify-between items-center px-4 sm:px-6 lg:px-8 py-4">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-        <button onClick={handleLogout} className="bg-error text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">Logout</button>
-      </header>
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8"><Outlet/></main>
-    </div>
-  );
-};
-
-const AdminDashboard = () => {
-  const [posts,setPosts]=useState([]); const [loading,setLoading]=useState(true);
-  const fetchPosts=useCallback(async()=>{ setLoading(true); const data=await getPosts(); setPosts(data); setLoading(false); },[]);
-  useEffect(()=>{ fetchPosts(); },[fetchPosts]);
-  const handleDelete=async(id)=>{ if(window.confirm('Are you sure you want to delete this post?')){ await deletePost(id); fetchPosts(); } };
-  if(loading) return <p>Loading posts...</p>;
-  return (
-    <div className="bg-white p-8 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold">Manage Posts</h2>
-        <Link to="/admin/new" className="bg-success text-white px-4 py-2 rounded-md hover:bg-green-700">+ New Post</Link>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {posts.map(p=>(
-              <tr key={p.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.title}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.author}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(p.date).toLocaleDateString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                  <Link to={`/admin/edit/${p.id}`} className="text-accent hover:text-secondary">Edit</Link>
-                  <button onClick={()=>handleDelete(p.id)} className="text-error hover:text-red-700">Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-const PostEditor = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [post, setPost] = useState(null);
-  const [title, setTitle] = useState('');
-  const [metaDescription, setMetaDescription] = useState('');
-  const [metaKeywords, setMetaKeywords] = useState('');
-  const [loading, setLoading] = useState(false);
-  const isEditing = Boolean(id);
-  const quillRef = useRef(null);
-  const quillInstanceRef = useRef(null);
-
-  const [isHtmlMode, setIsHtmlMode] = useState(false);
-  const [htmlSource, setHtmlSource] = useState('');
-  const stateRef = useRef();
-  stateRef.current = { isHtmlMode, htmlSource, setIsHtmlMode, setHtmlSource };
-
-  // Separate effect for one-time Quill initialization
-  useEffect(() => {
-    if (quillRef.current && !quillInstanceRef.current) {
-      const handleHtmlToggle = () => {
-        const { isHtmlMode, htmlSource, setIsHtmlMode, setHtmlSource } = stateRef.current;
-        const quill = quillInstanceRef.current;
-        const newIsHtmlMode = !isHtmlMode;
-
-        if (newIsHtmlMode) { // Entering HTML mode
-            setHtmlSource(quill.root.innerHTML);
-            quill.container.classList.add('quill-html-mode');
-        } else { // Leaving HTML mode
-            quill.container.classList.remove('quill-html-mode');
-            const length = quill.getLength();
-            quill.deleteText(0, length);
-            if (htmlSource) {
-                quill.clipboard.dangerouslyPasteHTML(0, htmlSource);
-            }
-        }
-        
-        const toolbar = quill.getModule('toolbar');
-        const htmlButton = toolbar.container.querySelector('.ql-html');
-        if (htmlButton) {
-          if (newIsHtmlMode) {
-            htmlButton.classList.add('ql-active');
-          } else {
-            htmlButton.classList.remove('ql-active');
-          }
-        }
-        setIsHtmlMode(newIsHtmlMode);
-      };
-
-      quillInstanceRef.current = new Quill(quillRef.current, {
-        theme: 'snow',
-        modules: {
-          toolbar: {
-            container: [
-              [{ 'size': ['small', false, 'large', 'huge'] }],
-              ['bold', 'italic', 'underline', 'strike'],
-              ['blockquote'],
-              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-              [{ 'indent': '-1'}, { 'indent': '+1' }],
-              ['link', 'image', 'video'],
-              ['clean'],
-              ['html']
-            ],
-            handlers: { 'html': handleHtmlToggle }
-          }
-        },
-        placeholder: 'Start writing your story here...',
-      });
-      
-      // Fix for: Property 'style'/'title' does not exist on type 'Element'.
-      const htmlButton = document.querySelector<HTMLElement>('.ql-toolbar .ql-html');
-      if (htmlButton) {
-        htmlButton.innerHTML = '&lt;/&gt;';
-        htmlButton.style.fontFamily = 'monospace';
-        htmlButton.style.fontWeight = 'bold';
-        htmlButton.title = 'Edit HTML Source';
-      }
-    }
-  }, []); // Empty dependency array ensures this runs only once
-
-  // Effect for loading data into the form
-  useEffect(() => {
-    const quill = quillInstanceRef.current;
-    if (quill) {
-      const toolbar = quill.getModule('toolbar');
-      const htmlButton = toolbar.container.querySelector('.ql-html');
-
-      const resetToVisualMode = () => {
-        setIsHtmlMode(false);
-        if (htmlButton) htmlButton.classList.remove('ql-active');
-        if (quill) {
-            quill.container.classList.remove('quill-html-mode');
-        }
-      };
-      
-      const clearEditorContent = () => {
-        const length = quill.getLength();
-        quill.deleteText(0, length);
-      };
-
-      if (isEditing) {
-        setLoading(true);
-        getPostById(id).then(fetchedPost => {
-          if (fetchedPost) {
-            setPost(fetchedPost);
-            setTitle(fetchedPost.title || '');
-            setMetaDescription(fetchedPost.metaDescription || '');
-            setMetaKeywords(fetchedPost.metaKeywords || '');
-            resetToVisualMode();
-            clearEditorContent();
-            if (fetchedPost.content) {
-              quill.clipboard.dangerouslyPasteHTML(0, fetchedPost.content);
-            }
-          }
-        }).catch(err => console.error(err))
-          .finally(() => setLoading(false));
-      } else { // New Post
-        setPost(null);
-        setTitle('');
-        setMetaDescription('');
-        setMetaKeywords('');
-        resetToVisualMode();
-        clearEditorContent();
-      }
-    }
-  }, [id, isEditing]);
-
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      alert('Title is required.');
-      return;
-    }
-    setLoading(true);
-
-    let finalContent;
-    if (isHtmlMode) {
-        finalContent = htmlSource;
-    } else {
-        finalContent = quillInstanceRef.current ? quillInstanceRef.current.root.innerHTML : '';
-    }
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = finalContent;
-    const images = tempDiv.querySelectorAll('img');
-    
-    let firstImageUrl = null;
-    if (images.length > 0) {
-        firstImageUrl = images[0].src;
-    }
-
-    const textContent = tempDiv.textContent || "";
-    const excerpt = textContent.substring(0, 150) + (textContent.length > 150 ? '...' : '');
-    const imageUrl = firstImageUrl || `https://picsum.photos/seed/${title.trim().replace(/\s+/g, '-') || 'post'}/800/400`;
-
-    let slug = post?.slug;
-    if (!slug) {
-        slug = slugify(title.trim()) + '-' + Math.random().toString(36).substring(2, 8);
-    }
-
-    const postData = {
-      title: title.trim(),
-      content: finalContent,
-      author: 'Admin',
-      excerpt,
-      imageUrl,
-      metaDescription: metaDescription.trim(),
-      metaKeywords: metaKeywords.trim(),
-      slug: slug,
-    };
-
-    try {
-      if (isEditing) {
-        await updatePost(id, postData);
-      } else {
-        await addPost(postData);
-      }
-      navigate('/admin');
-    } catch (err) {
-      console.error("Failed to save post:", err);
-      let friendlyError = `An error occurred while saving the post. Please check your Firestore rules. Error: ${err.message}`;
-      if (err.code === 'resource-exhausted' || (err.message && err.message.toLowerCase().includes('too large'))) {
-          friendlyError = 'Failed to save post. The content, including images, is too large. Firestore documents have a 1MB size limit. Please try using smaller or fewer images.';
-      }
-      alert(friendlyError);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md relative">
-      {loading && isEditing && (
-        <div className="absolute inset-0 bg-white bg-opacity-80 flex justify-center items-center z-10 rounded-lg">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      )}
-      <h2 className="text-3xl font-bold mb-6">{isEditing ? 'Edit Post' : 'Create New Post'}</h2>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="title-input" className="block text-sm font-medium text-gray-700">Title</label>
-          <input
-            id="title-input"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="meta-description-input" className="block text-sm font-medium text-gray-700">Meta Description (for SEO)</label>
-          <textarea
-            id="meta-description-input"
-            value={metaDescription}
-            onChange={(e) => setMetaDescription(e.target.value)}
-            rows="3"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            placeholder="A concise summary of the article for search engines (around 160 characters)."
-          />
-        </div>
-        <div>
-            <label htmlFor="meta-keywords-input" className="block text-sm font-medium text-gray-700">Meta Keywords (for SEO, comma-separated)</label>
-            <input
-                id="meta-keywords-input"
-                type="text"
-                value={metaKeywords}
-                onChange={(e) => setMetaKeywords(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                placeholder="e.g., cricket, Virat Kohli, IPL 2024"
-            />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-          <div ref={quillRef} style={{ height: '400px', backgroundColor: 'white' }} className="mt-1" />
-          {isHtmlMode && (
-            <textarea
-                value={htmlSource}
-                onChange={(e) => setHtmlSource(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm font-mono"
-                style={{ height: '400px', backgroundColor: '#f3f4f6', resize: 'vertical' }}
-                placeholder="Edit your HTML source code here..."
-            />
-          )}
-        </div>
-        <div className="flex justify-end">
-          <button type="submit" disabled={loading} className="bg-primary text-white px-6 py-2 rounded-md hover:bg-secondary disabled:bg-gray-400 transition-colors">
-            {loading ? 'Saving...' : (isEditing ? 'Update Post' : 'Publish Post')}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-};
-
-// --- Sitemap Component ---
-const Sitemap = () => {
-  const [sitemapXml, setSitemapXml] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    document.title = 'Sitemap | Cricket Hub';
-    setMetaTag('name', 'robots', 'noindex');
-    return () => removeMetaTagByAttr('name', 'robots');
-  }, []);
-
-  useEffect(() => {
-    const generateSitemap = async () => {
-      setLoading(true);
-      try {
-        const posts = await getPosts();
-        const path = window.location.pathname.replace(/index\.html$/, '');
-        const baseUrl = `${window.location.origin}${path}`;
-
-        const staticPages = [
-          { path: '#/', priority: '1.0', changefreq: 'daily' },
-          { path: '#/about', priority: '0.8', changefreq: 'monthly' },
-          { path: '#/contact', priority: '0.5', changefreq: 'yearly' },
-          { path: '#/privacy', priority: '0.5', changefreq: 'yearly' },
-        ];
-
-        const today = new Date().toISOString().split('T')[0];
-
-        const staticUrls = staticPages.map(page => `
-  <url>
-    <loc>${baseUrl}${page.path}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>${page.changefreq}</changefreq>
-    <priority>${page.priority}</priority>
-  </url>`).join('');
-
-        const postUrls = posts.map(post => `
-  <url>
-    <loc>${baseUrl}#/post/${post.slug || post.id}</loc>
-    <lastmod>${post.date ? new Date(post.date).toISOString().split('T')[0] : today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>`).join('');
-
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticUrls}${postUrls}
-</urlset>`;
-
-        setSitemapXml(xml);
-      } catch (error) {
-        console.error("Failed to generate sitemap:", error);
-        setSitemapXml('<!-- Error generating sitemap -->');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    generateSitemap();
-  }, []);
-
-  if (loading) {
-    return <div className="p-4 text-center">Generating sitemap...</div>;
-  }
-  
-  return <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', margin: 0, padding: '1rem', height: '100vh', boxSizing: 'border-box', overflow: 'auto', background: '#fff', color: '#000' }}>{sitemapXml}</pre>;
-};
-
-
-// --- Analytics Tracker ---
-const AnalyticsTracker = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    // This effect runs on component mount and whenever the location changes.
-    if (typeof window.gtag === 'function') {
-      // For a single-page app (SPA) using HashRouter, the path changes without a full page reload.
-      // We need to manually send a 'page_view' event to Google Analytics for each route change.
-      // `location.pathname` from the `useLocation` hook gives the virtual path (e.g., '/post/some-slug').
-      // This ensures each page view is tracked with its correct, individual path.
-      window.gtag('event', 'page_view', {
-        page_path: location.pathname + location.hash,
-        page_title: document.title,
-        page_location: window.location.href
-      });
-    }
-  }, [location]);
-
-  return null; // This component does not render anything
-};
-
-// --- Layout Wrapper ---
-// Fix for: Property 'children' is missing in type '{}' but required in type '{ children: any; }'.
-const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
-    const location = useLocation();
-    const isSitemap = location.pathname === '/sitemap.xml';
-    const isAdmin = location.pathname.startsWith('/admin');
-    
-    if (isSitemap || isAdmin) {
-        // Sitemap and Admin pages have their own layout.
-        return <>{children}</>;
-    }
-
-    // Public pages get the main layout.
-    return (
-        <>
-            <Header/>
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
-                {children}
-            </div>
-            <Footer/>
-        </>
-    );
-};
-
-
-// --- App ---
-const App = () => (
-  <HashRouter>
-    <AnalyticsTracker />
-    <LayoutWrapper>
-      <Routes>
-        <Route path="/" element={<PostList/>}/>
-        <Route path="/post/:slug" element={<PostDetail/>}/>
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/privacy" element={<PrivacyPolicyPage />} />
-        <Route path="/admin" element={<AdminLayout/>}>
-          <Route index element={<AdminDashboard/>}/>
-          <Route path="new" element={<PostEditor/>}/>
-          <Route path="edit/:id" element={<PostEditor/>}/>
-        </Route>
-        <Route path="/sitemap.xml" element={<Sitemap />} />
-        <Route path="*" element={<div className="text-center py-20 text-gray-500"><h1 className="text-4xl font-bold mb-4">404</h1><p>Page Not Found</p></div>}/>
-      </Routes>
-    </LayoutWrapper>
-  </HashRouter>
-);
-
-
-const rootElem = document.getElementById('root');
-const FlexRoot = () => <div className="flex flex-col min-h-screen"><App /></div>;
-const root = ReactDOM.createRoot(rootElem);
-root.render(<FlexRoot/>);
+    window.addEventListener('keydown',handle
